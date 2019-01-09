@@ -7,8 +7,8 @@
 </template>
 
 <script>
-import LayoutHeader from '~/components/layout/header.vue';
-import LayoutFooter from '~/components/layout/footer.vue';
+import LayoutHeader from '~/components/main/header.vue';
+import LayoutFooter from '~/components/main/footer.vue';
 
 export default {
 	components: {

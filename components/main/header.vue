@@ -1,6 +1,5 @@
 <template>
 	<header id="header" class="header">
-		<h3 />
 	</header>
 </template>
 

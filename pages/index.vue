@@ -2,36 +2,33 @@
 
 	<main class="page page--home">
 		<section class="intro">
-			<henris-nuxt />
 		</section>
 	</main>
 
 </template>
 
 <script>
-import henrisNuxt from '~/components/henris-nuxt.vue';
 export default {
-	components: {
-		henrisNuxt
+	mounted() {
+		CSS.paintWorklet.addModule('painter.js');
+		let root = document.documentElement;
+		root.addEventListener('mousemove', (e) => {
+			const x = e.clientX > 10 ? e.clientX / 10 : 10;
+			root.style.setProperty('--checkerboard-x', x);
+			root.style.setProperty('--checkerboard-y', e.clientY / 10);
+		});
 	}
 };
 </script>
 
 <style lang="scss">
-@import '~tools';
-
-.page {
-	// general page styles
-	&--home {
-		// specific home styles
-	}
+:root {
+	--checkerboard-y: 10;
+	--checkerboard-x: 32;
 }
-
 .intro {
-	height: 100vh;
+	background-image: paint(checkerboard);
 	width: 100vw;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	height: 100vh;
 }
 </style>

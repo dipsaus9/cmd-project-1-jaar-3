@@ -1,6 +1,6 @@
 <template>
 	<footer id="footer" class="footer">
-		<h5 class="sub">footer</h5>
+
 	</footer>
 </template>
 

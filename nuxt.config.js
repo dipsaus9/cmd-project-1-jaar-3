@@ -57,16 +57,6 @@ module.exports = {
 	// },
 
 	/*
-	 ** Axios module configuration
-	 */
-	axios: {
-		retry: {
-			retries: 3
-		},
-		baseURL: config.api
-	},
-
-	/*
 	 ** Build configuration
 	 */
 	build: {

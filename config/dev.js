@@ -1,4 +1,4 @@
 module.exports = {
 	env: 'development',
-	api: 'https://staging.api.example.com/wp-json'
+	api: 'http://ws.audioscrobbler.com/2.0/'
 };

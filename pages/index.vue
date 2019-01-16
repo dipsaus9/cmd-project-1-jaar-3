@@ -81,8 +81,8 @@ export default {
 
 		const pie = d3
 			.pie()
-			.startAngle(1.1 * Math.PI)
-			.endAngle(3.1 * Math.PI)
+			.startAngle(0 * Math.PI)
+			.endAngle(2 * Math.PI)
 			.value((d) => d.playcount);
 		svg
 			.append('g')
@@ -162,8 +162,11 @@ svg {
 	margin: 0 auto;
 	display: block;
 	text {
+		font-family: $secondary-font-family;
+		font-size: rem(16);
+	}
+	.middle-text text {
 		font-size: rem(32);
-		font-family: $main-font-family;
 	}
 }
 </style>

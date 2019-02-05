@@ -1,9 +1,9 @@
 <template>
 	<main class="page page--home">
-		<section class="basic__information">
+		<section v-if="state !== 'artist'" class="basic__information">
 			<div class="basic__form-field">
 				<h1>Do I really listen to that much music?</h1>
-				<p>Enter your Last.fm username to find out more about your listening habbits!</p>
+				<p>Enter your Last.fm username to find out more about your listening habits!</p>
 				<form @submit.prevent="getData">
 					<div class="fieldset">
 						<input
@@ -17,27 +17,39 @@
 				</form>
 			</div>
 		</section>
-		<section id="data" :class="{ active : userWeeklyChart.artist && userWeeklyChart.artist.length }" class="start">
-			<div class="artists__list">
-				<ul>
-					<li v-for="(artist, index) in getAristList(userWeeklyChart)" :key="index">
-						<span
-							:class="{ 'hover': index === hoverElement }"
-							:id="index"
-							class="artists__link"
-							@click="changeState(artist.name)"
-						>
-							<span class="artists__name">{{ artist.name }}</span>
-							<span class="artists__count">
-								<span class="artists__count-naming">Times played:</span>
-								{{ artist.playcount }}
+		<transition name="fade">
+			<section
+				v-if="state !== 'artist'"
+				id="data"
+				:class="{ active : userWeeklyChart.artist && userWeeklyChart.artist.length }"
+				class="start"
+			>
+				<div class="artists__list">
+					<ul>
+						<li v-for="(artist, index) in getArtistList(userWeeklyChart)" :key="index">
+							<span
+								:class="{ 'hover': index === hoverElement }"
+								:id="index"
+								class="artists__link"
+								@click="changeState(artist.name)"
+							>
+								<span class="artists__name">{{ artist.name }}</span>
+								<span class="artists__count">
+									<span class="artists__count-naming">Times played:</span>
+									{{ artist.playcount }}
+								</span>
 							</span>
-						</span>
-					</li>
-				</ul>
-			</div>
-			<div class="svg_container">
-			</div>
+						</li>
+					</ul>
+				</div>
+				<div class="svg_container">
+				</div>
+			</section>
+		</transition>
+		<section :class="{ active : state === 'artist' }" class="second">
+			<li v-for="(artist, index) in artistData" :key="index">
+				{{ artist.name }}
+			</li>
 		</section>
 	</main>
 </template>
@@ -53,6 +65,7 @@ export default {
 			totalSongsPlayed: 0,
 			hoverElement: -1,
 			userWeeklyChart: {},
+			artistData: [],
 			state: 'home',
 			artist: ''
 		};
@@ -92,7 +105,7 @@ export default {
 		},
 		createChart() {
 			const reducer = (accumulator, currentvalue) => accumulator + Number(currentvalue.playcount);
-			const data = this.getAristList(this.userWeeklyChart, 10);
+			const data = this.getArtistList(this.userWeeklyChart, 7);
 			this.totalSongsPlayed = this.userWeeklyChart.artist.reduce(reducer, 0);
 
 			//d3 moments
@@ -217,7 +230,7 @@ export default {
 			});
 			window.scrollTo(0, height);
 		},
-		getAristList(originalData, maxNr = this.maxArtistsPerPage) {
+		getArtistList(originalData, maxNr = this.maxArtistsPerPage) {
 			if (originalData && originalData.artist && originalData.artist.length) {
 				const max = maxNr;
 				const page = this.pageNr;
@@ -228,7 +241,7 @@ export default {
 			}
 		},
 		changeState(name) {
-			this.state = 'arist';
+			this.state = 'artist';
 			this.artist = name.split(' ').join('+');
 			this.getArtistInfo(this.artist);
 		},
@@ -252,7 +265,6 @@ export default {
 			});
 			if (response && response.data && response.data.artisttracks && response.data.artisttracks.track) {
 				this.artistData = response.data.artisttracks.track;
-				console.log(this.artistData);
 			}
 		}
 	}
@@ -355,11 +367,13 @@ svg {
 	position: sticky;
 	align-self: flex-start;
 	top: 0;
+	clip-path: inset(0 0 0 0);
 	width: 50vw;
 }
 .artists {
 	&__list {
 		width: 50vw;
+		clip-path: inset(0 0 0 0);
 		height: 0;
 		overflow: hidden;
 		ul {
@@ -403,5 +417,22 @@ svg {
 			transition: 0.2s linear;
 		}
 	}
+}
+.second {
+	clip-path: inset(0 100% 0 0);
+	transition: clip-path 0.5s ease-in-out 0.5s;
+	&.active {
+		clip-path: inset(0 0 0 0);
+		li {
+			color: white;
+		}
+	}
+}
+.fade-enter-active,
+.fade-leave-active {
+	transition: clip-path 0.5s ease-in-out;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+	clip-path: inset(0 0 0 100%) !important;
 }
 </style>

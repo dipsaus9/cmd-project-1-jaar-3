@@ -6,7 +6,7 @@ if (config.env === 'development') {
 }
 
 module.exports = {
-	mode: 'universal',
+	mode: 'spa',
 	env: {
 		environment: config.env || 'production'
 	},

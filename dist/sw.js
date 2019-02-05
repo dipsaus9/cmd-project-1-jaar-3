@@ -2,6 +2,10 @@ importScripts('/cmd-project-1-jaar-3/_nuxt/workbox.4c4f5ca6.js')
 
 workbox.precaching.precacheAndRoute([
   {
+    "url": "/cmd-project-1-jaar-3/_nuxt/6df59e2be732d951f0eb.js",
+    "revision": "8def3cebe68a4a868b53b812473c894b"
+  },
+  {
     "url": "/cmd-project-1-jaar-3/_nuxt/6ec24fb8fd8146ac8839.js",
     "revision": "1222e44754cc977853671facfbe4f72d"
   },
@@ -16,10 +20,6 @@ workbox.precaching.precacheAndRoute([
   {
     "url": "/cmd-project-1-jaar-3/_nuxt/936dbcfe1d27f587dbb5.js",
     "revision": "179366aa3a8cba1138471ec1a2e6ee39"
-  },
-  {
-    "url": "/cmd-project-1-jaar-3/_nuxt/bbdbe82a5c63f703221b.js",
-    "revision": "abfff46a07451919c85976239cbad67e"
   },
   {
     "url": "/cmd-project-1-jaar-3/_nuxt/c222c6f7dea8ae1215d9.js",

@@ -7,6 +7,9 @@ if (config.env === 'development') {
 
 module.exports = {
 	mode: 'spa',
+	router: {
+		base: process.env.NODE_ENV === 'dev' ? '/' : '/cmd-project-1-jaar-3/'
+	},
 	env: {
 		environment: config.env || 'production'
 	},

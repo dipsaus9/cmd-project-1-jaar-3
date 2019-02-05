@@ -6,7 +6,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "sh scripts/dev.sh",
-		"generate": "nuxt generate && rm -rf docs/ && cp -R dist/ docs/",
+		"generate": "nuxt generate",
 		"devlocal": "sh scripts/devlocal.sh",
 		"staging": "sh scripts/staging.sh",
 		"production": "sh scripts/production.sh",

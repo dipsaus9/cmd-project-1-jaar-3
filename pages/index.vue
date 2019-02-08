@@ -1,9 +1,9 @@
-<template>
+.name<template>
 	<main class="page page--home">
 		<section v-if="state !== 'artist'" class="basic__information">
 			<div class="basic__form-field">
-				<h1>Do I really listen to that much music?</h1>
-				<p>Enter your Last.fm username to find out more about your listening habits!</p>
+				<h1>What music do I like?</h1>
+				<p>Enter your Last.fm username to find out more about your top 50 tracks of last month!</p>
 				<form @submit.prevent="getData">
 					<div class="fieldset">
 						<input
@@ -21,22 +21,19 @@
 			<section
 				v-if="state !== 'artist'"
 				id="data"
-				:class="{ active : userWeeklyChart.artist && userWeeklyChart.artist.length }"
-				class="start"
+				class="start active"
 			>
 				<div class="artists__list">
 					<ul>
-						<li v-for="(artist, index) in getArtistList(userWeeklyChart)" :key="index">
+						<li v-for="(artist, index) in topArtists" :key="index">
 							<span
 								:class="{ 'hover': index === hoverElement }"
 								:id="index"
 								class="artists__link"
-								@click="changeState(artist.name)"
 							>
 								<span class="artists__name">{{ artist.name }}</span>
 								<span class="artists__count">
-									<span class="artists__count-naming">Times played:</span>
-									{{ artist.playcount }}
+									<span class="artists__count-naming">Times played: {{ getTimesPlayed(artist.children) }}</span>
 								</span>
 							</span>
 						</li>
@@ -62,9 +59,10 @@ export default {
 			pageNr: 1,
 			userName: 'dipsaus9',
 			maxArtistsPerPage: 50,
-			totalSongsPlayed: 0,
+			totalTimesPlayed: 0,
 			hoverElement: -1,
-			userWeeklyChart: {},
+			topTracks: {},
+			topArtists: {},
 			artistData: [],
 			state: 'home',
 			artist: ''
@@ -73,53 +71,125 @@ export default {
 	methods: {
 		async getData() {
 			const apiKey = '9295242e7b99eba039f7147793f3bc23';
-			const date = this.getLastWeek(7);
-			const lastWeek = this.getLastWeek(12);
 			const response = await this.$axios({
 				method: 'get',
 				url: 'http://ws.audioscrobbler.com/2.0/',
 				responseType: 'json',
 				params: {
 					api_key: apiKey,
-					method: 'user.getWeeklyArtistChart',
+					method: 'user.getTopTracks',
 					format: 'json',
-					from: lastWeek.getTime() / 1000,
-					to: date.getTime() / 1000,
+					period: '1month',
 					user: this.userName
 				}
 			});
 			if (
 				response &&
 				response.data &&
-				response.data.weeklyartistchart &&
-				response.data.weeklyartistchart.artist &&
-				response.data.weeklyartistchart.artist.length
+				response.data.toptracks &&
+				response.data.toptracks.track &&
+				response.data.toptracks.track.length
 			) {
-				this.userWeeklyChart = response.data.weeklyartistchart;
+				this.topTracks = response.data.toptracks;
 				this.createChart();
 			}
+		},
+		fancyTimeFormat(time) {
+			const hrs = ~~(time / 3600);
+			const mins = ~~((time % 3600) / 60);
+			const secs = ~~time % 60;
+			let ret = '';
+
+			if (hrs > 0) {
+				ret += '' + hrs + ':' + (mins < 10 ? '0' : '');
+			}
+
+			ret += '' + mins + ':' + (secs < 10 ? '0' : '');
+			ret += '' + secs;
+			return ret;
 		},
 		getLastWeek(days) {
 			const today = new Date();
 			return new Date(today.getFullYear(), today.getMonth(), today.getDate() - days);
 		},
-		createChart() {
-			const reducer = (accumulator, currentvalue) => accumulator + Number(currentvalue.playcount);
-			const data = this.getArtistList(this.userWeeklyChart, 7);
-			this.totalSongsPlayed = this.userWeeklyChart.artist.reduce(reducer, 0);
+		collectAllArtists() {
+			const allData = this.getArtistList(this.topTracks);
 
+			this.topArtists = allData.reduce((accumulator, currentvalue) => {
+				const exists = accumulator.find((field) => field.name === currentvalue.artist.name);
+				if (!exists) {
+					accumulator.push({
+						name: currentvalue.artist.name,
+						children: [currentvalue]
+					});
+				} else {
+					exists.children.push(currentvalue);
+				}
+				return accumulator;
+			}, []);
+			this.topArtists.sort((a, b) => this.getTimesPlayed(b.children) - this.getTimesPlayed(a.children));
+			// this.topArtists.splice(10, this.topArtists.length - 1);
+		},
+		createChart() {
+			// source: https://beta.observablehq.com/@mbostock/d3-sunburst
+			this.collectAllArtists();
+			let loaded = false;
+			setTimeout(() => {
+				loaded = true;
+			}, 500);
+			const reducer = (accumulator, currentvalue) => accumulator + Number(currentvalue.playcount);
+			this.totalTimesPlayed = this.topTracks.track.reduce(reducer, 0);
 			//d3 moments
 			let height = window.innerHeight,
-				width = window.innerWidth / 2,
-				radius = Math.min(width, (height / 5) * 3) / 2,
-				transitionTime = 250;
+				width = (window.innerWidth / 4) * 3,
+				radius = Math.min(width, (height / 10) * 9) / 2,
+				transitionTime = 15;
+			const newData = {
+				name: 'Artist',
+				children: this.topArtists
+			};
 
 			const color = d3.scaleOrdinal(d3.schemeBlues[8]);
+			const root = d3.partition().size([2 * Math.PI, radius])(
+				d3
+					.hierarchy(newData)
+					.sum((d) => d.playcount)
+					.sort((a, b) => b.playcount - a.playcount)
+			);
 
 			document.querySelector('.svg_container').innerHTML = '';
 
 			const element = d3.select('.svg_container');
 
+			const formatName = (data) => {
+				const playcount = data.playcount;
+				let name;
+				if (playcount) {
+					name = data.name
+						.split(' ')
+						.splice(0, 2)
+						.join(' ');
+					return name;
+				} else {
+					name = data.name;
+					if (name.length > 15) {
+						return name
+							.split(' ')
+							.splice(0, 3)
+							.join(' ');
+					} else {
+						return name;
+					}
+				}
+			};
+
+			const formatHover = (data) => {
+				if (data.playcount) {
+					return `${data.name} - played: ${data.playcount}`;
+				} else {
+					return data.name;
+				}
+			};
 			const svg = element
 				.append('svg')
 				.attr('class', 'svg__element')
@@ -133,108 +203,126 @@ export default {
 
 			const arc = d3
 				.arc()
-				.outerRadius(radius - 20)
-				.innerRadius(radius - 35);
+				.startAngle((d) => d.x0)
+				.endAngle((d) => d.x1)
+				.padAngle((d) => Math.min((d.x1 - d.x0) / 2, 0.005))
+				.padRadius(radius / 2)
+				.innerRadius((d) => d.y0)
+				.outerRadius((d) => d.y1 - 1);
 
-			const textArc = d3
-				.arc()
-				.outerRadius(radius + 30)
-				.innerRadius(radius);
-
-			const pie = d3
-				.pie()
-				.startAngle(0 * Math.PI)
-				.endAngle(2 * Math.PI)
-				.value((d) => d.playcount);
+			function arcTweenPath(a, i) {
+				// (a.x0s ? a.x0s : 0) -- grab the prev saved x0 or set to 0 (for 1st time through)
+				// avoids the stash() and allows the sunburst to grow into being
+				var oi = d3.interpolate(
+					{ x0: a.x0s ? a.x0s : 0, x1: a.x1s ? a.x1s : 0, y0: a.y0s ? a.y0s : 0, y1: a.y1s ? a.y1s : 0 },
+					a
+				);
+				function tween(t) {
+					var b = oi(t);
+					a.x0s = b.x0;
+					a.x1s = b.x1;
+					a.y0s = b.y0;
+					a.y1s = b.y1;
+					return arc(b);
+				}
+				return tween;
+			}
 			svg
 				.append('g')
 				.attr('class', 'middle-text')
 				.append('text')
 				.attr('transform', 'translate(0, 0)')
 				.style('text-anchor', 'middle')
-				.text(this.totalSongsPlayed);
+				.text(`Total songs: ${this.totalTimesPlayed}`);
 
-			const g = svg
-				.selectAll('.arc')
-				.data(pie(data))
-				.enter()
+			svg
 				.append('g')
-				.attr('class', 'arc');
-
-			g.append('path')
-				.style('fill', (d) => color(d.data.name))
+				.attr('fill-opacity', 0.6)
+				.selectAll('path')
+				.data(root.descendants().filter((d) => d.depth))
+				.enter()
+				.append('path')
 				.on('mouseover', (d, i) => {
-					const el = document.getElementById(i);
-					el.scrollIntoView();
-					this.hoverElement = i;
+					if (loaded) {
+						if (d.depth === 2) {
+							let artistName = d.parent.data.name;
+							const index = newData.children.findIndex((artist) => artist.name === artistName);
+							i = index;
+						}
+						const el = document.getElementById(i);
+						el.scrollIntoView();
+						this.hoverElement = i;
+					}
 				})
 				.on('mouseleave', () => {
 					this.hoverElement = -1;
 				})
-				.on('click', (d) => {
-					this.changeState(d.data.name);
+				.attr('fill', (d) => {
+					while (d.depth > 1) d = d.parent;
+					return color(d.data.name);
 				})
 				.transition()
 				.ease(d3.easeCubic)
 				.delay((d, i) => i * transitionTime)
 				.duration(transitionTime)
-				.attrTween('d', (d) => {
-					var i = d3.interpolate(d.startAngle + 0.1, d.endAngle);
-					return function(t) {
-						d.endAngle = i(t);
-						return arc(d);
-					};
+				.attrTween('d', function(d, i) {
+					return arcTweenPath(d, i);
 				});
 
-			g.append('text')
-				.attr('transform', (d) => `translate(${textArc.centroid(d)})`)
-				.attr('dy', '.35em')
-				.attr('class', 'd3-label')
-				.on('mouseover', (d, i) => {
-					const el = document.getElementById(i);
-					el.scrollIntoView();
-					this.hoverElement = i;
+			svg
+				.data(root.descendants().filter((d) => d.depth))
+				.enter()
+				.append('title')
+				.text((d) => formatHover(d.data));
+
+			svg
+				.append('g')
+				.attr('pointer-events', 'none')
+				.attr('text-anchor', 'middle')
+				.selectAll('text')
+				.data(root.descendants().filter((d) => d.depth && ((d.y0 + d.y1) / 2) * (d.x1 - d.x0) > 10))
+				.enter()
+				.append('text')
+				.attr('transform', function(d) {
+					const x = (((d.x0 + d.x1) / 2) * 180) / Math.PI;
+					const y = (d.y0 + d.y1) / 2;
+					return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
 				})
-				.on('mouseleave', () => {
-					this.hoverElement = -1;
-				})
-				.on('click', (d) => {
-					this.changeState(d.data.name);
-				})
-				.style('text-anchor', 'middle')
+				.attr('dy', '0.35em')
 				.style('opacity', 0)
 				.transition()
 				.delay((d, i) => i * transitionTime)
 				.duration(transitionTime)
 				.style('opacity', 1)
-				.text((d) => d.data.name);
+				.text((d) => formatName(d.data));
 
-			window.addEventListener('resize', () => {
-				height = window.innerHeight;
-				width = window.innerWidth / 2;
-				radius = Math.min(width, (height / 4) * 3) / 2;
-
-				const updateSvg = d3.select('.svg__element');
-				const updatePath = d3.select('.arc');
-				const updateG = d3.select('.svg__element-g');
-
-				updateSvg
-					.attr('width', width)
-					.attr('height', height)
-					.attr('viewBox', `0 0 ${width} ${height}`)
-					.attr('perserveAspectRatio', 'xMinYMid');
-
-				updateG.attr('transform', `translate(${width / 2}, ${height / 2})`);
-
-				updatePath.data(pie(data));
-			});
+			//
+			// window.addEventListener('resize', () => {
+			// 	height = window.innerHeight;
+			// 	width = window.innerWidth / 2;
+			// 	radius = Math.min(width, (height / 4) * 3) / 2;
+			//
+			// 	const update = d3.select('.svg__element');
+			// 	const updatePath = d3.select('.arc');
+			// 	const updateG = d3.select('.svg__element-g');
+			//
+			// 	updateSvg
+			// 		.attr('width', width)
+			// 		.attr('height', height)
+			// 		.attr('viewBox', `0 0 ${width} ${height}`)
+			// 		.attr('perserveAspectRatio', 'xMinYMid');
+			//
+			// 	updateG.attr('transform', `translate(${width / 2}, ${height / 2})`);
+			//
+			// 	updatePath.data(pie(data));
+			// });
 			window.scrollTo(0, height);
 		},
 		getArtistList(originalData, maxNr = this.maxArtistsPerPage) {
-			if (originalData && originalData.artist && originalData.artist.length) {
+			if (originalData && originalData.track && originalData.track.length) {
 				const max = maxNr;
 				const page = this.pageNr;
-				const data = [...originalData.artist];
+				const data = [...originalData.track];
 				return data.splice((page - 1) * max, max);
 			} else {
 				return [];
@@ -266,6 +354,10 @@ export default {
 			if (response && response.data && response.data.artisttracks && response.data.artisttracks.track) {
 				this.artistData = response.data.artisttracks.track;
 			}
+		},
+		getTimesPlayed(data) {
+			const reducer = (accumulator, currentvalue) => accumulator + Number(currentvalue.playcount);
+			return data.reduce(reducer, 0);
 		}
 	}
 };
@@ -359,20 +451,20 @@ svg {
 	path {
 		cursor: pointer;
 	}
-	.middle-text text {
-		font-size: rem(32);
-	}
+	// .middle-text text {
+	// 	font-size: rem(32);
+	// }
 }
 .svg_container {
 	position: sticky;
 	align-self: flex-start;
 	top: 0;
 	clip-path: inset(0 0 0 0);
-	width: 50vw;
+	width: 75vw;
 }
 .artists {
 	&__list {
-		width: 50vw;
+		width: 25vw;
 		clip-path: inset(0 0 0 0);
 		height: 0;
 		overflow: hidden;

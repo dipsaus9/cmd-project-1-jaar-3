@@ -73,7 +73,7 @@ export default {
 			const apiKey = '9295242e7b99eba039f7147793f3bc23';
 			const response = await this.$axios({
 				method: 'get',
-				url: 'http://ws.audioscrobbler.com/2.0/',
+				url: 'https://ws.audioscrobbler.com/2.0/',
 				responseType: 'json',
 				params: {
 					api_key: apiKey,
@@ -339,7 +339,7 @@ export default {
 			const lastWeek = this.getLastWeek(12);
 			const response = await this.$axios({
 				method: 'get',
-				url: 'http://ws.audioscrobbler.com/2.0/',
+				url: 'https://ws.audioscrobbler.com/2.0/',
 				responseType: 'json',
 				params: {
 					api_key: apiKey,

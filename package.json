@@ -1,7 +1,7 @@
 {
 	"name": "cmd-project",
 	"version": "1.0.0",
-	"description": "My solid Matise Nuxt.js project",
+	"description": "CMD project",
 	"author": "Dennis Dipsaus",
 	"private": true,
 	"scripts": {

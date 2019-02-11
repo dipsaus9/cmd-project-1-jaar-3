@@ -71,6 +71,7 @@ export default {
 	data() {
 		return {
 			pageNr: 1,
+			secondInit: false,
 			userName: 'dipsaus9',
 			maxArtistsPerPage: 50,
 			totalTimesPlayed: 0,
@@ -376,6 +377,7 @@ export default {
 			}
 			if (this.compareArtists.length < 2 && this.state === 'artist') {
 				this.state = 'home';
+				this.secondInit = false;
 				setTimeout(() => {
 					this.createChart();
 				});
@@ -386,137 +388,157 @@ export default {
 					return await this.getArtistInfo(name);
 				})
 			);
-			if (newArtists.length) {
+			if (newArtists.length > 1) {
 				this.artists = newArtists;
-				this.createSecondChart();
+				this.createSecondChart(clicked);
 			}
 		},
 		createSecondChart() {
-			const artists = this.artists;
-			const date = this.getLastWeek(0);
-			const lastWeek = this.getLastWeek(7);
+			if (document.querySelector('.svg_container--compare')) {
+				document.querySelector('.svg_container--compare').innerHTML = '';
+				const artists = this.artists;
 
-			const artistKeys = this.compareArtists.map((index) => {
-				return this.topArtists[index].name;
-			});
-
-			let names = [];
-			let namesCreated = false;
-			let dataCreated = artists.map((artist) => {
-				let newArtist = [];
-				// let totalVal = 0;
-				for (let i = lastWeek.getTime() / 1000; i < date.getTime() / 1000; i += 10800) {
-					let value = 0;
-					if (!namesCreated) {
-						names.push(i);
-					}
-					const contains = artist.filter((singleArtist) => {
-						if (singleArtist.date.uts > i && singleArtist.date.uts < i + 10800) {
-							return true;
-						}
-					});
-					value = contains.length;
-					newArtist.push(value);
-				}
-				namesCreated = true;
-				return newArtist;
-			});
-
-			let length = dataCreated[0].length;
-			let totals = [];
-			for (let i = 0; i < length; i++) {
-				let startValue = 0;
-				dataCreated.forEach((data, index) => {
-					const val = data[i];
-					data[i] = [startValue, startValue + data[i], artistKeys[index]];
-					startValue += val;
+				const artistKeys = this.compareArtists.map((index) => {
+					return this.topArtists[index].name;
 				});
-				totals.push(startValue);
+
+				let names = [];
+				let namesCreated = false;
+				let dataCreated = artists.map((artist) => {
+					let newArtist = [];
+					for (let i = 0; i < 24; i++) {
+						let value = 0;
+						if (!namesCreated) {
+							names.push(i);
+						}
+						const contains = artist.filter((singleArtist) => {
+							const date = new Date(singleArtist.date.uts * 1000);
+							if (date.getHours() === i) {
+								return true;
+							}
+						});
+						value = contains.length;
+						newArtist.push(value);
+					}
+					namesCreated = true;
+					return newArtist;
+				});
+
+				let length = dataCreated[0].length;
+				let totals = [];
+				for (let i = 0; i < length; i++) {
+					let startValue = 0;
+					dataCreated.forEach((data, index) => {
+						const val = data[i];
+						data[i] = [startValue, startValue + data[i], artistKeys[index]];
+						startValue += val;
+					});
+					totals.push(startValue);
+				}
+				dataCreated.keys = artistKeys;
+				dataCreated.names = names;
+				dataCreated.totals = totals;
+
+				let height = window.innerHeight,
+					width = (window.innerWidth / 4) * 3;
+
+				const data = dataCreated;
+
+				const margin = { top: 50, right: 40, bottom: 150, left: 40 };
+
+				const x = d3
+					.scaleBand()
+					.rangeRound([0, width - margin.left - margin.right])
+					.padding(0.3)
+					.align(0.3);
+
+				const y = d3.scaleLinear().rangeRound([height - margin.top - margin.bottom, 0]);
+
+				const color = d3
+					.scaleOrdinal()
+					.range(['#98abc5', '#8a89a6', '#7b6888', '#6b486b', '#a05d56', '#d0743c', '#ff8c00']);
+
+				x.domain(data.names);
+				y.domain([0, d3.max(data.totals)]).nice();
+
+				//only init once, otherwise update
+				this.secondInit = true;
+				const element = d3.select('.svg_container--compare');
+
+				const svg = element
+					.append('svg')
+					.attr('class', 'svg__element--compare')
+					.attr('width', width)
+					.attr('height', height)
+					.attr('viewBox', `0 0 ${width} ${height}`)
+					.attr('perserveAspectRatio', 'xMinYMid');
+
+				const g = svg
+					.append('g')
+					.attr('class', 'svg__element-g')
+					.attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+				g.append('g')
+					.attr('class', 'axis axis--y')
+					.call(
+						d3
+							.axisLeft(y)
+							.ticks(10, 's')
+							.tickSize(-width)
+							.tickFormat(d3.format('d'))
+					)
+					.append('text')
+					.attr('x', 2)
+					.attr('y', y(y.ticks(10).pop()))
+					.attr('dy', '0.35em')
+					.attr('text-anchor', 'start')
+					.attr('fill', '#000')
+					.text('Total numbers');
+
+				g.append('g')
+					.attr('class', 'axis axis--x')
+					.attr('transform', `translate(0, ${height - margin.top - margin.bottom})`)
+					.call(d3.axisBottom(x))
+					.append('text')
+					.attr('x', 2)
+					.attr('y', y(y.ticks(10).pop()))
+					.attr('dy', '0.35em')
+					.attr('text-anchor', 'start')
+					.attr('fill', '#000')
+					.text('Hours');
+
+				g.selectAll('.bars')
+					.data(data)
+					.enter()
+					.append('g')
+					.attr('class', 'bars')
+					.attr('fill', (d, i) => {
+						return color(d[i][2]);
+					})
+					.selectAll('rect')
+					.data((d) => {
+						return d;
+					})
+					.enter()
+					.append('rect')
+					.attr('x', (d, i) => {
+						return x(data.names[i]);
+					})
+					.attr('y', (d) => {
+						return y(d[1]);
+					})
+					.attr('height', (d) => {
+						return y(d[0]) - y(d[1]);
+					})
+					.attr('width', x.bandwidth())
+					.append('title')
+					.text((d) => {
+						return d[2];
+					});
 			}
-			dataCreated.keys = artistKeys;
-			dataCreated.names = names;
-			dataCreated.totals = totals;
-
-			let height = window.innerHeight,
-				width = (window.innerWidth / 4) * 3;
-
-			const element = d3.select('.svg_container--compare');
-
-			const svg = element
-				.append('svg')
-				.attr('class', 'svg__element--compare')
-				.attr('width', width)
-				.attr('height', height)
-				.attr('viewBox', `0 0 ${width} ${height}`)
-				.attr('perserveAspectRatio', 'xMinYMid');
-			// .attr('class', 'svg__element-g')
-			// .attr('transform', `translate(${width / 2}, ${height / 2})`);
-
-			const margin = { top: 50, right: 40, bottom: 150, left: 40 };
-			const margin2 = { top: 430, right: 20, bottom: 30, left: 40 };
-			const data = dataCreated;
-
-			const g = svg
-				.append('g')
-				.attr('class', 'svg__element-g')
-				.attr('transform', `translate(${margin.left}, ${margin.top})`);
-			var x = d3
-				.scaleBand()
-				.rangeRound([0, width - margin.left - margin.right])
-				.padding(0.3)
-				.align(0.3);
-
-			var y = d3.scaleLinear().rangeRound([height - margin.top - margin.bottom, 0]);
-
-			const color = d3.scaleOrdinal().range(['#98abc5', '#8a89a6', '#7b6888', '#6b486b', '#a05d56', '#d0743c', '#ff8c00']);
-			x.domain(data.names);
-			y.domain([0, d3.max(data.totals)]).nice();
-
-			g.append('g')
-				.attr('class', 'axis axis--y')
-				.call(d3.axisLeft(y).ticks(10, 's'))
-				.append('text')
-				.attr('x', 2)
-				.attr('y', y(y.ticks(10).pop()))
-				.attr('dy', '0.35em')
-				.attr('text-anchor', 'start')
-				.attr('fill', '#000')
-				.text('Population');
-
-			g.append('g')
-				.attr('class', 'axis axis--x')
-				.attr('transform', `translate(0, ${height - margin.top - margin.bottom})`)
-				.call(d3.axisBottom(x));
-
-			g.selectAll('.serie')
-				.data(data)
-				.enter()
-				.append('g')
-				.attr('class', 'serie')
-				.attr('fill', (d, i) => {
-					return color(d[i][2]);
-				})
-				.selectAll('rect')
-				.data((d) => {
-					return d;
-				})
-				.enter()
-				.append('rect')
-				.attr('x', (d, i) => {
-					return x(data.names[i]);
-				})
-				.attr('y', (d) => {
-					return y(d[1]);
-				})
-				.attr('height', (d) => {
-					return y(d[0]) - y(d[1]);
-				})
-				.attr('width', x.bandwidth());
 		},
 		async getArtistInfo(artist) {
 			const apiKey = '9295242e7b99eba039f7147793f3bc23';
-			const date = this.getLastWeek(0);
-			const lastWeek = this.getLastWeek(7);
 			const response = await this.$axios({
 				method: 'get',
 				url: 'https://ws.audioscrobbler.com/2.0/',
@@ -524,8 +546,6 @@ export default {
 				params: {
 					api_key: apiKey,
 					artist: artist,
-					startTimestamp: lastWeek.getTime() / 1000,
-					endTimestamp: date.getTime() / 1000,
 					method: 'user.getArtistTracks',
 					format: 'json',
 					user: this.userName
@@ -743,5 +763,8 @@ svg {
 }
 .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
 	clip-path: inset(0 0 0 100%) !important;
+}
+line {
+	stroke: color(BlueyGrey);
 }
 </style>

@@ -10,29 +10,34 @@ $ npm install
 
 # serve with hot reload at localhost:3000
 $ npm run dev
-
-# build for staging/production and launch server
-$ npm run staging/production
-$ ./node_modules/.bin/nuxt start
 ```
 
-For detailed explanation on how things work, checkout [Nuxt.js docs](https://nuxtjs.org).
+# Project
 
-For detailed explanation on henris, checkout [Henris docs](https://henris.style).
+Dit project geeft inzicht in je luistergedrag op Last.fm. In de eerste fase van de applicatie is het mogelijk om je gebruikersnaam in te voeren. Wanneer je op submit klikt zal de applicatie verbinding maken met Last.fm. Last.fm haalt de top 50 meest geluisterde nummers van de afgelopen maand.
 
+De variablen in deze dataset zijn:
 
-### Wordpress
+- duration
+- playcount
+- artist name
+- image
+- name
 
-| Env | Url | Codeship |  
-| ---- | ---- | ---- |
-| develop | https://dev.api.url.nl | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=develop)](https://app.codeship.com/projects/projectid) |
-| staging | https://staging.api.url.nl | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=staging)](https://app.codeship.com/projects/projectid) |
-| production | TBD | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=master)](https://app.codeship.com/projects/projectid) |
+Last.fm biedt geeft hier een maxiumum van 50 nummers terug. Deze data heb ik in een overzicht gebracht waardoor je snel en overzichtelijk kan zien hoeveel je naar welke artiest luisterd. Ook zie je hier elk nummer beschikbaar. Wanneer er 2 of meerderen artiesten zijn geselecteerd is het mogelijk om deze artiesten te vergelijken met elkaar.
 
-### Nuxt
+Wanneer op de knop wordt gedrukt zal de applicatie opnieuw verbinding maken met Last.fm en de volgende data ophalen:
 
-| Env | Url | Codeship |  
-| ---- | ---- | ---- |
-| develop | https://dev.url.nl | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=fixme)](https://app.codeship.com/projects/projectid) |
-| staging | https://staging.url.nl | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=fixme)](https://app.codeship.com/projects/projectid) |
-| production | TBD | [ ![Codeship Status for MatiseAms/projectname](https://app.codeship.com/projects/fixme-fixme/status?branch=fixme)](https://app.codeship.com/projects/projectid) |
+- artist name
+- name
+- date
+- image
+- album
+
+Deze data is per nummer met een precieze unix timestamp. Hierdoor is het mogelijk om een visualisatie te maken die inzicht geeft in wanneer het nummer is geluisterd. Zo kwam ik op de tweede visualisatie.
+
+Deze visualisatie heeft alleen wat technische problemen waardoor ik het niet voor elkaar heb gekregen om dit mooier af te ronden.
+
+## Techniek
+
+Voor deze applicatie heb ik gebruik gemaakt van Vue.js, Nuxt, axios, d3.
